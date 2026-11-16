@@ -29,8 +29,6 @@ const (
 	definitionsBackoffMax      = 10 * time.Minute
 	definitionsColdStartWait   = 2 * time.Second
 
-	errDefinitionsUnavailable = "definitions-unavailable"
-
 	msgDefinitionsRefreshRejected = "achievements definitions refresh rejected"
 )
 

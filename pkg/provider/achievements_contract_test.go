@@ -119,22 +119,6 @@ func (m *memAchievements) ListMine(_ context.Context, p achievements.Person) (ac
 	return rows, nil
 }
 
-func (m *memAchievements) rowsFor(user string) (awards, progress int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	for key := range m.awards {
-		if strings.HasPrefix(key, user+"/") {
-			awards++
-		}
-	}
-	for key := range m.progress {
-		if strings.HasPrefix(key, user+"/") {
-			progress++
-		}
-	}
-	return awards, progress
-}
-
 func achievementContractNow() time.Time { return time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC) }
 func loadAchievementsTestBundle(t *testing.T, body string) *achievements.Snapshot {
 	t.Helper()

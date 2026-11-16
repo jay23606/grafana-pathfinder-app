@@ -216,3 +216,46 @@ merged store tests (`84c582fdae1916910e5197a44bd0078018315135`, backend PR #146)
 Their resource names, versions, schemas, and award create-only role are preserved.
 The local SDK provider registers these kinds; this is not evidence of Cloud
 registration or deployment. There is no new achievement frontend in this change.
+
+### Local achievement acceptance
+
+The public definitions URL returned 404 during the 2026-11-16 test. The normal
+build reports `503 definitions-unavailable` with `Retry-After` until that catalogue
+is published. This is an upstream dependency, not a resource-store failure.
+
+Run the normal local journeys with:
+
+```sh
+PATHFINDER_SDK_E2E=1 GRAFANA_URL=http://localhost:3302 npx playwright test tests/sdk-guide-authoring.spec.ts tests/sdk-achievements.spec.ts --project=chromium
+```
+
+For successful achievement-write acceptance before publication, build a temporary
+catalogue fixture. This replaces only the public definitions constructor via a Go
+build overlay; routes, authentication, delegated clients, and Grafana storage are
+real. It does not modify repository sources:
+
+```sh
+python3 scripts/build-sdk-achievement-fixture.py --output /tmp/pathfinder-sdk-achievement-fixture --goarch arm64
+```
+
+Use `--goarch amd64` for an x86 Grafana container. With the existing dedicated
+local instance and plugin mount at `/tmp/pathfinder-sdk-local`, back up the normal
+binary, install the fixture atomically, restart, and test. Restore the normal
+binary even if the test fails; do not publish the fixture build:
+
+```sh
+binary=/tmp/pathfinder-sdk-local/gpx_grafana-pathfinder-app_linux_arm64
+cp "$binary" /tmp/pathfinder-sdk-normal-backup
+restore_sdk() { cp /tmp/pathfinder-sdk-normal-backup "$binary.next" && mv "$binary.next" "$binary" && docker restart pathfinder-sdk-migration; }
+trap restore_sdk EXIT
+cp /tmp/pathfinder-sdk-achievement-fixture "$binary.next"
+mv "$binary.next" "$binary"
+docker restart pathfinder-sdk-migration
+curl --fail --retry 20 --retry-delay 1 --retry-connrefused http://localhost:3302/api/health
+PATHFINDER_SDK_E2E=1 PATHFINDER_ACHIEVEMENTS_FIXTURE=1 GRAFANA_URL=http://localhost:3302 npx playwright test tests/sdk-achievements.spec.ts --project=chromium
+```
+
+The fixture test checks persistence, retry deduplication, ignored body-supplied
+identity, personal reads, and cross-namespace refusal. It creates achievement
+records for the test user. The normal build and all existing data remain in place
+after restoration. Cloud testing remains deferred.
