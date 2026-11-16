@@ -325,3 +325,28 @@ bounded and does not claim every possible concurrent schedule or deployment.
 Cloud already supports the SDK prerequisites. Cloud execution/coexistence and Cloud rollout/rollback remain deferred; the
 local rollback evidence above does not close those deployment-specific rows. Admin CLI, exporter, repository consolidation, admission rules and
 background reconcilers remain outside this migration.
+
+## Achievements added from main
+
+Achievements landed after the original frozen baseline. The gate therefore uses
+an additional immutable baseline, `6b52c2bd`, for the nine achievement response
+fixtures and the original store contract tests. The original eighteen-fixture
+comparison and write/read mutation controls remain unchanged. SDK persistence
+passes the same `pkg/achievements/storetest` contract against a schema-enforcing
+HTTP server, including version conflicts, duplicate awards, evaluator recovery,
+and durable saves with unreadable acknowledgements.
+
+On 2026-11-16, the SDK achievement routes passed against real local Grafana
+storage with a temporary, known definitions catalogue: successful writes,
+personal reads, retry deduplication, and cross-namespace rejection. The normal
+binary was then restored and passed all existing OSS journeys plus the achievement
+availability check (six Playwright tests including authentication setup; the
+fixture-only write test is skipped on the normal build).
+
+The public CDN definitions URL currently returns 404, so the normal build reports
+`503 definitions-unavailable` with `Retry-After`. Successful write acceptance used
+a test-only Go build overlay, not the public catalogue; it does not prove catalogue
+publication. The helper and restoration instructions are in
+[Local achievement acceptance](BACKEND_PROXY_PATTERN.md#local-achievement-acceptance).
+No legacy HTTP adapter remains in the running normal SDK build. Existing local
+data is retained. Cloud verification remains deferred.

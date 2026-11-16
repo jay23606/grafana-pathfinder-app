@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 
 BASELINE = 'f106a8904174594c456b00edb1f67b6905f0cd8e'
+ACHIEVEMENT_BASELINE = '6b52c2bda02d3239e4b12c5015e2d7802a22d214'
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 
@@ -72,6 +73,17 @@ def main():
             raise RuntimeError('frozen baseline transcript drifted')
         # Explicit permitted difference: SDK POST responses add Cache-Control: no-store.
         # Assert both exact values before comparison; never discard arbitrary headers.
+        achievement_target = Path(temp) / 'achievement-baseline'
+        achievement_target.mkdir()
+        archive = subprocess.check_output(['git', 'archive', ACHIEVEMENT_BASELINE], cwd=ROOT)
+        with tarfile.open(fileobj=io.BytesIO(archive)) as source:
+            source.extractall(achievement_target, filter='data')
+        subprocess.run(['go', 'test', './pkg/plugin', '-run', '^(TestContractValueGoldens|TestAchievementStore)', '-count=1'], cwd=achievement_target, check=True)
+        achievement_goldens = {file.name: json.loads(file.read_text()) for file in (achievement_target / 'pkg/plugin/testdata/contract').glob('achievements-*.json')}
+        sdk_achievements = {name: goldens[1].pop(name) for name in achievement_goldens}
+        if len(achievement_goldens) != 9 or compare(achievement_goldens, sdk_achievements):
+            raise RuntimeError('achievement baseline contracts differ: ' + '\n'.join(compare(achievement_goldens, sdk_achievements)))
+        print('Nine achievement contracts match their separate frozen main baseline', flush=True)
         unavailable = goldens[0].pop('learning-insights.unavailable.json')
         if unavailable['capability'] != {'available': False, 'reason': 'identity-unavailable'}:
             raise RuntimeError('legacy unavailable-identity contract changed')
